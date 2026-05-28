@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QUANTY — Sistema de Seguimiento · Rodolfo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --surface3: #1c1c28;
+    --border: #1e1e2e;
+    --border2: #2a2a3e;
+    --accent: #6C63FF;
+    --accent2: #9D97FF;
+    --accent-glow: rgba(108,99,255,0.12);
+    --gold: #EF9F27;
+    --text: #e8e8f0;
+    --text-dim: #7a7a9a;
+    --text-muted: #3a3a5a;
+    --green: #3DFFA0;
+    --red: #FF4D6A;
+    --blue: #4DB8FF;
+    --orange: #FF9F6C;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── API SCREEN ── */
+  .api-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+  .api-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 30px 26px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+  .api-logo-row { display: flex; align-items: center; gap: 12px; }
+  .api-logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent), #9D97FF); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: #fff; }
+  .api-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: #fff; }
+  .api-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 1px; }
+  .api-desc { font-size: 11px; color: var(--text-dim); line-height: 1.6; border-left: 2px solid var(--accent); padding-left: 10px; }
+  .field label { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px; }
+  .field input { width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 9px 11px; outline: none; transition: border-color .15s; }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .field input::placeholder { color: var(--text-muted); }
+  .api-btn { width: 100%; background: var(--accent); border: none; border-radius: 7px; color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 11px; cursor: pointer; }
+  .api-btn:hover { background: var(--accent2); }
+  .api-note { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.5; }
+  .api-err { font-size: 10px; color: var(--red); background: rgba(255,77,106,.08); border: 1px solid rgba(255,77,106,.2); border-radius: 6px; padding: 7px 10px; display: none; }
+
+  /* ── TOPBAR ── */
+  .topbar { display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .brand-logo { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), #9D97FF); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; color: #fff; }
+  .brand-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; color: #fff; letter-spacing: 0.05em; }
+  .brand-sep { color: var(--text-muted); font-size: 12px; }
+  .brand-proj { font-size: 11px; color: var(--accent2); font-family: 'Syne', sans-serif; font-weight: 600; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .key-btn { background: rgba(239,159,39,.08); border: 1px solid rgba(239,159,39,.2); color: var(--gold); border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 8px; padding: 3px 8px; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; }
+  .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* ── LAYOUT ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 220px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+  .sb-hdr { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; justify-content: space-between; }
+  .sb-count { background: var(--accent-glow); color: var(--accent2); padding: 1px 6px; border-radius: 8px; font-size: 8px; }
+  .proj-list { flex: 1; overflow-y: auto; padding: 4px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+  .pj { padding: 8px 10px; border-radius: 7px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; transition: all .15s; }
+  .pj:hover { background: var(--surface2); }
+  .pj.active { background: var(--surface2); border-color: var(--border2); }
+  .pj-top { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+  .pj-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .pj-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px; color: var(--text); flex: 1; line-height: 1.2; }
+  .pj-badge { font-size: 7px; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+  .b-on { background: rgba(61,255,160,.1); color: var(--green); }
+  .b-dev { background: rgba(239,159,39,.1); color: var(--gold); }
+  .b-def { background: rgba(122,122,154,.1); color: var(--text-dim); }
+  .b-demo { background: rgba(77,184,255,.1); color: var(--blue); }
+  .pj-meta { font-size: 8px; color: var(--text-muted); display: flex; gap: 6px; margin-top: 2px; }
+  .pj-pending { color: var(--gold); }
+  .sb-ftr { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 8px; color: var(--text-muted); }
+
+  /* ── CONTENT AREA ── */
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; padding: 0 16px; gap: 2px; }
+  .tab { padding: 10px 16px; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap; }
+  .tab:hover { color: var(--text-dim); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .tab-badge { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; font-size: 7px; margin-left: 5px; }
+  .tab-badge.todo { background: rgba(239,159,39,.15); color: var(--gold); }
+  .tab-badge.files { background: rgba(77,184,255,.12); color: var(--blue); }
+
+  /* ── PANELS ── */
+  .panel { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+  .panel.active { display: flex; }
+
+  /* ── CHAT PANEL ── */
+  .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 14px; text-align: center; padding: 24px; }
+  .welcome-logo { width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), #9D97FF); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: #fff; box-shadow: 0 0 30px var(--accent-glow); }
+  .welcome-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: #fff; }
+  .welcome-sub { font-size: 10px; color: var(--text-dim); line-height: 1.6; max-width: 320px; }
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; max-width: 420px; }
+  .qbtn { padding: 9px 11px; border: 1px solid var(--border2); border-radius: 7px; background: var(--surface); color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer; text-align: left; transition: all .15s; line-height: 1.4; }
+  .qbtn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); }
+  .qbtn span { display: block; font-size: 8px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .msg { display: flex; flex-direction: column; gap: 3px; max-width: 80%; animation: fadeUp .18s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  .msg.user { align-self: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .msg-lbl { font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); padding: 0 3px; }
+  .msg.user .msg-lbl { text-align: right; }
+  .bubble { padding: 10px 13px; border-radius: var(--radius); font-size: 12px; line-height: 1.65; }
+  .msg.user .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+  .msg.assistant .bubble { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .bubble strong { color: var(--gold); }
+  .bubble h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent2); margin: 7px 0 3px; }
+  .bubble h3:first-child { margin-top: 0; }
+  .bubble .row { display: flex; gap: 5px; align-items: flex-start; padding: 1px 0; font-size: 11px; }
+  .bubble .arr { color: var(--accent2); flex-shrink: 0; }
+
+  .typing { display: flex; align-items: center; gap: 4px; padding: 10px 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); border-bottom-left-radius: 3px; width: fit-content; }
+  .td { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: blink 1.2s infinite; }
+  .td:nth-child(2){animation-delay:.2s} .td:nth-child(3){animation-delay:.4s}
+  @keyframes blink { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+
+  .input-bar { padding: 11px 15px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .input-wrap { display: flex; align-items: flex-end; gap: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 11px; transition: border-color .15s; }
+  .input-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .chat-input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; resize: none; line-height: 1.5; max-height: 90px; min-height: 20px; }
+  .chat-input::placeholder { color: var(--text-muted); }
+  .send-btn { width: 28px; height: 28px; border-radius: 6px; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; color: #fff; }
+  .send-btn:hover { background: var(--accent2); }
+  .send-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .input-hint { font-size: 8px; color: var(--text-muted); margin-top: 5px; text-align: right; }
+
+  /* ── PENDIENTES PANEL ── */
+  .pend-panel { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .pend-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .pend-toolbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #fff; flex: 1; }
+  .btn-add { background: var(--accent); border: none; border-radius: 6px; color: #fff; font-family: 'DM Mono', monospace; font-size: 9px; padding: 5px 12px; cursor: pointer; letter-spacing: 0.06em; transition: all .15s; }
+  .btn-add:hover { background: var(--accent2); }
+  .btn-sm { background: transparent; border: 1px solid var(--border2); border-radius: 5px; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 8px; padding: 4px 9px; cursor: pointer; letter-spacing: 0.05em; transition: all .15s; }
+  .btn-sm:hover { border-color: var(--accent2); color: var(--text); }
+
+  .status-filters { display: flex; gap: 5px; margin-bottom: 12px; }
+  .sf { padding: 3px 10px; border-radius: 15px; font-size: 8px; letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border2); color: var(--text-muted); transition: all .15s; }
+  .sf.active { border-color: currentColor; }
+  .sf-all.active { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+  .sf-todo.active { color: var(--gold); border-color: rgba(239,159,39,.4); background: rgba(239,159,39,.08); }
+  .sf-wip.active { color: var(--blue); border-color: rgba(77,184,255,.4); background: rgba(77,184,255,.08); }
+  .sf-done.active { color: var(--green); border-color: rgba(61,255,160,.4); background: rgba(61,255,160,.08); }
+
+  .pend-list { display: flex; flex-direction: column; gap: 6px; }
+  .pend-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+
+  .pend-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; transition: border-color .15s; }
+  .pend-item:hover { border-color: var(--border2); }
+  .pend-item.status-done { opacity: 0.55; }
+
+  .pend-status-btn { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; margin-top: 1px; transition: all .15s; background: transparent; }
+  .pend-status-btn.todo { border-color: var(--gold); color: transparent; }
+  .pend-status-btn.todo:hover { background: rgba(239,159,39,.15); }
+  .pend-status-btn.wip { border-color: var(--blue); color: var(--blue); }
+  .pend-status-btn.done { border-color: var(--green); background: rgba(61,255,160,.15); color: var(--green); }
+
+  .pend-body { flex: 1; min-width: 0; }
+  .pend-text { font-size: 12px; color: var(--text); line-height: 1.4; margin-bottom: 4px; }
+  .pend-item.status-done .pend-text { text-decoration: line-through; color: var(--text-dim); }
+  .pend-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pend-priority { font-size: 8px; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .pri-alta { background: rgba(255,77,106,.1); color: var(--red); }
+  .pri-media { background: rgba(239,159,39,.1); color: var(--gold); }
+  .pri-baja { background: rgba(122,122,154,.1); color: var(--text-dim); }
+  .pend-date { font-size: 8px; color: var(--text-muted); }
+  .pend-actions { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
+  .pend-act-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 2px 4px; border-radius: 4px; transition: all .15s; }
+  .pend-act-btn:hover { color: var(--text); background: var(--surface3); }
+
+  /* ADD FORM */
+  .add-form { background: var(--surface2); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none; flex-direction: column; gap: 8px; }
+  .add-form.open { display: flex; }
+  .add-form input, .add-form select { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 10px; outline: none; transition: border-color .15s; }
+  .add-form input:focus, .add-form select:focus { border-color: var(--accent); }
+  .add-form input::placeholder { color: var(--text-muted); }
+  .add-form select option { background: var(--surface2); }
+  .add-form-row { display: flex; gap: 8px; }
+  .add-form-row select { flex: 1; }
+  .add-form-btns { display: flex; gap: 6px; justify-content: flex-end; }
+  .btn-save { background: var(--accent); border: none; border-radius: 6px; color: #fff; font-family: 'DM Mono', monospace; font-size: 9px; padding: 6px 14px; cursor: pointer; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border2); border-radius: 6px; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 9px; padding: 6px 14px; cursor: pointer; }
+
+  /* ── ARCHIVOS PANEL ── */
+  .files-panel { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .files-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .files-toolbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #fff; flex: 1; }
+
+  .files-grid { display: flex; flex-direction: column; gap: 6px; }
+  .file-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; display: flex; align-items: center; gap: 10px; transition: border-color .15s; }
+  .file-item:hover { border-color: var(--border2); }
+  .file-icon { font-size: 16px; flex-shrink: 0; width: 28px; text-align: center; }
+  .file-body { flex: 1; min-width: 0; }
+  .file-name { font-size: 12px; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta { font-size: 9px; color: var(--text-muted); display: flex; gap: 8px; }
+  .file-tag { font-size: 8px; padding: 1px 6px; border-radius: 4px; background: rgba(108,99,255,.12); color: var(--accent2); }
+  .file-actions { display: flex; gap: 4px; }
+  .file-act-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 3px 5px; border-radius: 4px; transition: all .15s; }
+  .file-act-btn:hover { color: var(--text); background: var(--surface3); }
+  .file-link { color: var(--blue); text-decoration: none; }
+  .file-link:hover { text-decoration: underline; }
+  .files-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+
+  .add-file-form { background: var(--surface2); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none; flex-direction: column; gap: 8px; }
+  .add-file-form.open { display: flex; }
+  .add-file-form input, .add-file-form select { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 10px; outline: none; transition: border-color .15s; }
+  .add-file-form input:focus { border-color: var(--accent); }
+  .add-file-form input::placeholder { color: var(--text-muted); }
+  .add-file-form select option { background: var(--surface2); }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- API SCREEN -->
+<div class="api-screen" id="apiScreen">
+  <div class="api-box">
+    <div class="api-logo-row">
+      <div class="api-logo">Q</div>
+      <div><div class="api-title">QUANTY</div><div class="api-sub">Sistema de Seguimiento · Rodolfo</div></div>
+    </div>
+    <div class="api-desc">Ingresa tu Anthropic API Key para activar el chat. Los pendientes y archivos funcionan sin ella.</div>
+    <div class="field">
+      <label>Anthropic API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." onkeydown="if(event.key==='Enter')saveKey()" />
+    </div>
+    <div class="api-err" id="apiErr">Key inválida. Debe empezar con sk-ant- o sk-</div>
+    <button class="api-btn" onclick="saveKey()">Activar QUANTY →</button>
+    <div class="api-note">Solo vive en tu sesión del navegador · No se almacena en servidores</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">Q</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="brand-name">QUANTY</span>
+      <span class="brand-sep">·</span>
+      <span class="brand-proj" id="topProj">Check-in General</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="key-btn" onclick="resetKey()">🔑 API Key</button>
+    <div class="status-dot"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-hdr">Proyectos <span class="sb-count">10</span></div>
+    <div class="proj-list" id="projList"></div>
+    <div class="sb-ftr">QUANTY v2.1 · Mayo 2026</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('chat',this)">💬 Chat</div>
+      <div class="tab" onclick="switchTab('pendientes',this)">
+        ⚡ Pendientes <span class="tab-badge todo" id="pendBadge">0</span>
+      </div>
+      <div class="tab" onclick="switchTab('archivos',this)">
+        📁 Archivos <span class="tab-badge files" id="filesBadge">0</span>
+      </div>
+    </div>
+
+    <!-- CHAT PANEL -->
+    <div class="panel active" id="panel-chat">
+      <div class="messages" id="messages"></div>
+      <div class="input-bar">
+        <div class="input-wrap">
+          <textarea class="chat-input" id="chatInput"
+            placeholder="Pregunta sobre este proyecto... (Enter = enviar)"
+            rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+        <div class="input-hint">Enter = enviar · Shift+Enter = nueva línea · Historial independiente por proyecto</div>
+      </div>
+    </div>
+
+    <!-- PENDIENTES PANEL -->
+    <div class="panel" id="panel-pendientes">
+      <div class="pend-panel">
+        <div class="pend-toolbar">
+          <div class="pend-toolbar-title" id="pendTitle">Pendientes</div>
+          <button class="btn-sm" onclick="toggleAddForm()">+ Agregar</button>
+          <button class="btn-sm" onclick="clearDone()">Limpiar listos</button>
+        </div>
+
+        <div class="add-form" id="addForm">
+          <input type="text" id="newPendText" placeholder="Describe el pendiente..." />
+          <div class="add-form-row">
+            <select id="newPendPriority">
+              <option value="alta">🔴 Prioridad alta</option>
+              <option value="media" selected>🟡 Prioridad media</option>
+              <option value="baja">⚪ Prioridad baja</option>
+            </select>
+            <select id="newPendStatus">
+              <option value="todo">Por hacer</option>
+              <option value="wip">En proceso</option>
+            </select>
+          </div>
+          <div class="add-form-btns">
+            <button class="btn-cancel" onclick="toggleAddForm()">Cancelar</button>
+            <button class="btn-save" onclick="addPendiente()">Guardar pendiente</button>
+          </div>
+        </div>
+
+        <div class="status-filters">
+          <div class="sf sf-all active" onclick="filterStatus('all',this)">Todos</div>
+          <div class="sf sf-todo" onclick="filterStatus('todo',this)">Por hacer</div>
+          <div class="sf sf-wip" onclick="filterStatus('wip',this)">En proceso</div>
+          <div class="sf sf-done" onclick="filterStatus('done',this)">Listos</div>
+        </div>
+
+        <div class="pend-list" id="pendList"></div>
+      </div>
+    </div>
+
+    <!-- ARCHIVOS PANEL -->
+    <div class="panel" id="panel-archivos">
+      <div class="files-panel">
+        <div class="files-toolbar">
+          <div class="files-toolbar-title" id="filesTitle">Archivos del proyecto</div>
+          <button class="btn-sm" onclick="toggleAddFileForm()">+ Agregar link</button>
+        </div>
+
+        <div class="add-file-form" id="addFileForm">
+          <input type="text" id="newFileName" placeholder="Nombre del archivo o recurso..." />
+          <input type="url" id="newFileUrl" placeholder="URL (GitHub, Drive, Notion, etc.)" />
+          <div class="add-form-row">
+            <select id="newFileType">
+              <option value="html">📄 HTML / Dashboard</option>
+              <option value="github">🐙 GitHub</option>
+              <option value="drive">📁 Google Drive</option>
+              <option value="doc">📝 Documento</option>
+              <option value="notion">🗒️ Notion</option>
+              <option value="sheet">📊 Spreadsheet</option>
+              <option value="other">🔗 Otro link</option>
+            </select>
+            <select id="newFileTag">
+              <option value="último">Último generado</option>
+              <option value="referencia">Referencia</option>
+              <option value="live">Live / Producción</option>
+              <option value="borrador">Borrador</option>
+            </select>
+          </div>
+          <div class="add-form-btns">
+            <button class="btn-cancel" onclick="toggleAddFileForm()">Cancelar</button>
+            <button class="btn-save" onclick="addFile()">Guardar archivo</button>
+          </div>
+        </div>
+
+        <div class="files-grid" id="filesList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── PROJECTS CONFIG ──────────────────────────────────────────────────
+const PROJS = {
+  general: { name:'Check-in General', dot:'#6C63FF', badge:'b-on', badgeLabel:'10', desc:'Vista completa', system: `Eres QUANTY — asistente central ejecutivo de Rodolfo. TONO: Directo. Sin introducción. Primera línea = respuesta. Sin adulación. En español.\n\nTienes contexto de los 10 proyectos: Quanty Asistente, Sala de Control Q360 (live: https://zettarzs10-hue.github.io/quantika360/), Q360 Sistema (3 inteligencias, Chat Q360), Q360 Demos (por construir), Radar IA, WhatsApp Q360 (en desarrollo), Trading Zetta (pendiente: alertas/riesgo/backtesting), Mktg Q360 (definiendo estrategia), Capital.com DEMO, Panel Maestro Claude. Modelo Q360: $1K/$3K/$5K USD/mes · Margen 25% · Referidos 12% · Métrica: utilidad acumulada.\n\nEn check-in: estado + próximo paso por proyecto. Compacto.`, quickActions:[{icon:'📊',label:'Check-in general',sub:'Estado de los 10 proyectos',msg:'Check-in general — dame el estado de mis 10 proyectos y el próximo paso de cada uno.'},{icon:'⚡',label:'¿Qué hago hoy?',sub:'Prioridad del día',msg:'¿Cuál es mi siguiente paso más importante hoy?'},{icon:'🔥',label:'Top 3 urgentes',sub:'Lo más crítico',msg:'¿Cuáles son los 3 pendientes más críticos ahora mismo?'},{icon:'📅',label:'Revisión semanal',sub:'Qué avanzó, qué falta',msg:'Revisión semanal: ¿qué proyectos tienen más deuda técnica?'}] },
+  q360: { name:'QUANTIKA360 Sistema', dot:'#6C63FF', badge:'b-on', badgeLabel:'Activo', desc:'Plataforma · 3 inteligencias', system:`Eres QUANTY — asistente del sistema Quantika360. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: QUANTIKA360 Sistema — plataforma 3 inteligencias: Financiera, de Negocios, Artificial. Chat Q360 activo. GitHub: zettarzs10-hue. Pendientes: historial Chat Q360, expandir system prompt, documentar 3 inteligencias, definir módulos. Modelo: $1K/$3K/$5K · Margen 25% · Referidos 12%.`, quickActions:[{icon:'💬',label:'Historial Chat Q360',sub:'Implementar persistencia',msg:'¿Cómo implemento historial de conversación en el Chat Q360?'},{icon:'🧠',label:'3 Inteligencias',sub:'Documentar propuesta',msg:'Ayúdame a documentar las 3 inteligencias de Quantika360.'},{icon:'⚙️',label:'System Prompt',sub:'Expandir y mejorar',msg:'Revisemos y expandamos el system prompt del Chat Q360.'},{icon:'📦',label:'Módulos Q360',sub:'Definir estructura',msg:'¿Qué módulos debería tener Quantika360 además de la Sala de Control?'}] },
+  sala: { name:'Sala de Control', dot:'#9D97FF', badge:'b-on', badgeLabel:'Live', desc:'Dashboard · GitHub Pages', system:`Eres QUANTY — asistente de la Sala de Control de Quantika360. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Sala de Control — dashboard HTML live en https://zettarzs10-hue.github.io/quantika360/ · 7 secciones: resumen ejecutivo, variables clave, proyección 3 escenarios, análisis, costos, hoja de ruta, rolling forecast. Modelo: $1K/$3K/$5K · Margen 25% · Referidos 12% · Métrica: utilidad acumulada. GitHub: zettarzs10-hue.`, quickActions:[{icon:'📊',label:'Estado dashboard',sub:'Qué mejorar',msg:'¿Qué mejoras son prioritarias para la Sala de Control?'},{icon:'🔄',label:'Rolling Forecast',sub:'Actualizar proyecciones',msg:'Ayúdame a actualizar el rolling forecast.'},{icon:'💡',label:'Nueva sección',sub:'Ideas para el dashboard',msg:'¿Qué sección agregarías al dashboard?'},{icon:'🚀',label:'Deploy',sub:'Actualizar GitHub Pages',msg:'¿Cuál es el proceso para actualizar la Sala de Control en GitHub Pages?'}] },
+  trading: { name:'Trading · Zetta', dot:'#EF9F27', badge:'b-dev', badgeLabel:'Pendientes', desc:'Alertas · riesgo · backtesting', system:`Eres QUANTY — asistente de trading de Rodolfo. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Trading Zetta — estrategia personal con Investing Pro. Cuenta DEMO en Capital.com. Pendientes: alertas por setup, reglas de riesgo documentadas, entradas recurrentes, backtesting. Enfócate exclusivamente en trading.`, quickActions:[{icon:'🎯',label:'Setups activos',sub:'Alertas pendientes',msg:'¿Qué setups tengo pendientes de documentar y alertar?'},{icon:'🛡️',label:'Reglas de riesgo',sub:'Definir gestión',msg:'Ayúdame a estructurar mis reglas de gestión de riesgo.'},{icon:'📈',label:'Backtesting',sub:'Plan de backtesting',msg:'¿Por dónde empiezo el backtesting de mi estrategia?'},{icon:'📋',label:'Entradas recurrentes',sub:'Documentar patrones',msg:'Ayúdame a documentar mis entradas recurrentes.'}] },
+  mktg: { name:'Mktg Quantika360', dot:'#3DFFA0', badge:'b-dev', badgeLabel:'Definiendo', desc:'Redes · contenido · marca', system:`Eres QUANTY — asistente de marketing de Quantika360. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Mktg Q360 — marketing y redes sociales. Estado: definiendo estrategia. Pendientes: plataformas, calendario editorial, voz de marca, primeros posts. Propuesta de valor: 3 inteligencias (Financiera, Negocios, IA). Planes $1K/$3K/$5K.`, quickActions:[{icon:'📱',label:'Plataformas',sub:'¿Dónde estar primero?',msg:'¿En qué plataformas debería estar Q360 primero?'},{icon:'🎙️',label:'Voz de marca',sub:'Tono y estilo',msg:'Ayúdame a definir la voz de marca de Quantika360.'},{icon:'📅',label:'Calendario editorial',sub:'Primeras 4 semanas',msg:'Crea un calendario editorial para las primeras 4 semanas de Q360.'},{icon:'✍️',label:'Primer post',sub:'Contenido de arranque',msg:'Escribe el primer post de lanzamiento de Q360 para LinkedIn.'}] },
+  whatsapp: { name:'WhatsApp Q360', dot:'#3DFFA0', badge:'b-dev', badgeLabel:'Desarrollo', desc:'Business · automatización', system:`Eres QUANTY — asistente del WhatsApp Business de Quantika360. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: WhatsApp Business Q360 — automatización y atención. Estado: en desarrollo. Objetivo: flujos, calificación prospectos, seguimiento.`, quickActions:[{icon:'🔀',label:'Flujos de atención',sub:'Diseñar flujos',msg:'¿Cuáles deberían ser los flujos principales del WhatsApp de Q360?'},{icon:'🤖',label:'Automatización',sub:'Qué automatizar primero',msg:'¿Qué mensajes automatizo primero en WhatsApp?'},{icon:'🎯',label:'Calificación',sub:'Filtrar prospectos',msg:'Diseña un flujo de calificación de prospectos por WhatsApp.'},{icon:'📋',label:'Templates',sub:'Mensajes aprobados',msg:'¿Qué templates necesito para empezar con WhatsApp Business?'}] },
+  demos: { name:'Demos Q360', dot:'#4DB8FF', badge:'b-def', badgeLabel:'Por construir', desc:'Demos para prospectos', system:`Eres QUANTY — asistente de Demos Q360. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Quantika360 Demos — por construir. Objetivo: demos para prospectos mostrando las 3 inteligencias. Planes $1K/$3K/$5K.`, quickActions:[{icon:'🎬',label:'¿Qué demostrar?',sub:'Definir contenido',msg:'¿Qué debería mostrar cada demo de Q360 para los 3 planes?'},{icon:'🏗️',label:'Estructura demos',sub:'Arquitectura',msg:'¿Cómo estructuro las demos por tipo de cliente?'},{icon:'⚡',label:'Demo MVP',sub:'Versión rápida',msg:'¿Cuál es la demo más simple y efectiva que construyo esta semana?'},{icon:'💼',label:'Guión demo',sub:'Presentación 10 min',msg:'Crea un guión de demo de 10 minutos para prospectos.'}] },
+  radar: { name:'Radar IA', dot:'#FF9F6C', badge:'b-on', badgeLabel:'Exploración', desc:'Innovación · herramientas IA', system:`Eres QUANTY — asistente del Radar IA de Rodolfo. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Radar IA — monitoreo de herramientas y tendencias IA. Objetivo: identificar qué aplicar a Quantika360 y Trading.`, quickActions:[{icon:'📡',label:'Novedades IA',sub:'Últimas herramientas',msg:'¿Qué herramientas IA nuevas son relevantes para mis proyectos?'},{icon:'🔧',label:'IA para Q360',sub:'Aplicaciones concretas',msg:'¿Qué herramientas IA aplico a Quantika360 ahora?'},{icon:'📊',label:'IA para Trading',sub:'Herramientas análisis',msg:'¿Qué IA me ayuda con mi estrategia de trading?'},{icon:'🗺️',label:'Mapa herramientas',sub:'Panorama actual',msg:'Dame un mapa de herramientas IA relevantes para mis proyectos.'}] },
+  capital: { name:'Capital.com DEMO', dot:'#FF4D6A', badge:'b-demo', badgeLabel:'DEMO', desc:'Cuenta demo · práctica', system:`Eres QUANTY — asistente de la cuenta Capital.com de Rodolfo. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Capital.com DEMO — práctica de estrategias de trading antes de ejecutar en real.`, quickActions:[{icon:'🎮',label:'Práctica del día',sub:'Qué practicar hoy',msg:'¿Qué debería practicar hoy en mi cuenta demo de Capital.com?'},{icon:'📋',label:'Revisar operaciones',sub:'Análisis demo',msg:'Ayúdame a analizar mis últimas operaciones demo.'},{icon:'⚙️',label:'Configurar alertas',sub:'Setup alertas',msg:'¿Cómo configuro alertas efectivas en Capital.com?'},{icon:'📚',label:'Aprender plataforma',sub:'Features',msg:'¿Qué features de Capital.com debería usar mejor?'}] },
+  panel: { name:'Panel Maestro', dot:'#7a7a9a', badge:'b-on', badgeLabel:'Control', desc:'Control de proyectos en Claude', system:`Eres QUANTY — asistente del Panel Maestro de Claude de Rodolfo. TONO: Directo. Sin introducción. Primera línea = respuesta. En español.\n\nPROYECTO: Panel Maestro Claude — control de chat y proyectos dentro de Claude. Gestión del sistema QUANTY.`, quickActions:[{icon:'⚙️',label:'Optimizar QUANTY',sub:'Mejorar el sistema',msg:'¿Cómo optimizo el sistema QUANTY para gestionar mejor mis proyectos?'},{icon:'📂',label:'Organizar proyectos',sub:'Estructura en Claude',msg:'¿Cómo organizo mis 10 proyectos en Claude?'},{icon:'🔄',label:'Flujo de trabajo',sub:'Rutina con Claude',msg:'¿Cuál es el flujo de trabajo ideal con Claude para mis proyectos?'},{icon:'💾',label:'Memoria y contexto',sub:'Qué guardar dónde',msg:'¿Qué va en instrucciones, archivos, chat y memoria?'}] }
+};
+
+const PROJ_KEYS = ['general','q360','sala','trading','mktg','whatsapp','demos','radar','capital','panel'];
+
+// ─── STATE ────────────────────────────────────────────────────────────
+let apiKey = '';
+let currentProj = 'general';
+let currentTab = 'chat';
+let statusFilter = 'all';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('quanty_state');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  const s = {};
+  PROJ_KEYS.forEach(k => s[k] = { history:[], pendientes:[], files:[] });
+  return s;
+}
+
+function saveState() {
+  try { localStorage.setItem('quanty_state', JSON.stringify(appState)); } catch(e) {}
+}
+
+let appState = loadState();
+// ensure all keys exist
+PROJ_KEYS.forEach(k => {
+  if (!appState[k]) appState[k] = { history:[], pendientes:[], files:[] };
+  if (!appState[k].pendientes) appState[k].pendientes = [];
+  if (!appState[k].files) appState[k].files = [];
+});
+
+// ─── API KEY ──────────────────────────────────────────────────────────
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-')) { document.getElementById('apiErr').style.display='block'; return; }
+  document.getElementById('apiErr').style.display='none';
+  apiKey = val;
+  sessionStorage.setItem('quanty_key', val);
+  document.getElementById('apiScreen').style.display='none';
+}
+
+function resetKey() {
+  sessionStorage.removeItem('quanty_key');
+  apiKey = '';
+  document.getElementById('apiKeyInput').value='';
+  document.getElementById('apiScreen').style.display='flex';
+}
+
+// ─── SIDEBAR BUILD ────────────────────────────────────────────────────
+function buildSidebar() {
+  const list = document.getElementById('projList');
+  list.innerHTML = '';
+  PROJ_KEYS.forEach((k,i) => {
+    const p = PROJS[k];
+    const s = appState[k];
+    const pendCount = (s.pendientes||[]).filter(x=>x.status!=='done').length;
+    const div = document.createElement('div');
+    div.className = 'pj' + (k===currentProj?' active':'');
+    div.id = 'pj-'+k;
+    div.onclick = () => switchProj(k);
+    div.innerHTML = `
+      <div class="pj-top">
+        <span class="pj-dot" style="background:${p.dot}"></span>
+        <span class="pj-name">${p.name}</span>
+        <span class="pj-badge ${p.badge}">${p.badgeLabel}</span>
+      </div>
+      <div class="pj-meta">
+        <span>${p.desc}</span>
+        ${pendCount>0?`<span class="pj-pending">· ${pendCount} pend.</span>`:''}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ─── PROJECT SWITCH ───────────────────────────────────────────────────
+function switchProj(k) {
+  if (k===currentProj) return;
+  currentProj = k;
+  document.querySelectorAll('.pj').forEach(el=>el.classList.remove('active'));
+  const el = document.getElementById('pj-'+k);
+  if (el) el.classList.add('active');
+  document.getElementById('topProj').textContent = PROJS[k].name;
+  renderCurrentTab();
+}
+
+// ─── TAB SWITCH ───────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  if (currentTab==='chat') renderChat();
+  else if (currentTab==='pendientes') renderPendientes();
+  else if (currentTab==='archivos') renderFiles();
+  updateBadges();
+}
+
+// ─── CHAT ─────────────────────────────────────────────────────────────
+function renderChat() {
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = '';
+  const s = appState[currentProj];
+  if (!s.history || s.history.length===0) {
+    const p = PROJS[currentProj];
+    msgs.innerHTML = `<div class="welcome" id="welcome">
+      <div class="welcome-logo">Q</div>
+      <div>
+        <div class="welcome-title">${p.name}</div>
+        <div class="welcome-sub" style="margin-top:4px;color:${p.dot}">Conversación independiente · historial guardado localmente</div>
+      </div>
+      <div class="quick-grid">
+        ${p.quickActions.map(a=>`<button class="qbtn" onclick="sq(\`${a.msg.replace(/`/g,'\\`')}\`)">${a.icon} ${a.label}<span>${a.sub}</span></button>`).join('')}
+      </div>
+    </div>`;
+  } else {
+    s.history.forEach(m => addBubble(m.role, m.content, false));
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function handleKey(e) {
+  if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,90)+'px';
+}
+
+function sq(text) {
+  document.getElementById('chatInput').value=text;
+  sendMessage();
+}
+
+let loading = false;
+
+async function sendMessage() {
+  if (loading) return;
+  if (!apiKey) { resetKey(); return; }
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+  appState[currentProj].history.push({role:'user',content:text});
+  addBubble('user',text,true);
+  input.value=''; input.style.height='auto';
+  loading=true;
+  document.getElementById('sendBtn').disabled=true;
+  const typing = showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1024,system:PROJS[currentProj].system,messages:appState[currentProj].history})
+    });
+    const data = await res.json();
+    typing.remove();
+    if (data.error) { addBubble('assistant',`Error: ${data.error.message}`,true); }
+    else {
+      const reply = data.content?.find(b=>b.type==='text')?.text||'Sin respuesta.';
+      appState[currentProj].history.push({role:'assistant',content:reply});
+      addBubble('assistant',reply,true);
+      saveState();
+    }
+  } catch(err) { typing.remove(); addBubble('assistant',`Error: ${err.message}`,true); }
+  loading=false;
+  document.getElementById('sendBtn').disabled=false;
+}
+
+function addBubble(role,text,scroll) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className=`msg ${role}`;
+  div.innerHTML=`<div class="msg-lbl">${role==='user'?'Rodolfo':'Quanty'}</div><div class="bubble">${fmt(text)}</div>`;
+  msgs.appendChild(div);
+  if (scroll) msgs.scrollTop=msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs=document.getElementById('messages');
+  const w=document.createElement('div');
+  w.className='msg assistant';
+  w.innerHTML='<div class="msg-lbl">Quanty</div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  msgs.appendChild(w); msgs.scrollTop=msgs.scrollHeight; return w;
+}
+
+function fmt(t) {
+  return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^#{1,3} (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^- (.+)$/gm,'<div class="row"><span class="arr">→</span><span>$1</span></div>')
+    .replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');
+}
+
+// ─── PENDIENTES ───────────────────────────────────────────────────────
+function renderPendientes() {
+  document.getElementById('pendTitle').textContent = `Pendientes · ${PROJS[currentProj].name}`;
+  const list = document.getElementById('pendList');
+  list.innerHTML='';
+  const all = appState[currentProj].pendientes||[];
+  const filtered = statusFilter==='all'?all:all.filter(p=>p.status===statusFilter);
+  if (filtered.length===0) {
+    list.innerHTML=`<div class="pend-empty">Sin pendientes${statusFilter!=='all'?' en este estado':''}.<br>Presiona "+ Agregar" para crear el primero.</div>`;
+    return;
+  }
+  const order = {alta:0,media:1,baja:2};
+  [...filtered].sort((a,b)=>(order[a.priority]||1)-(order[b.priority]||1)).forEach((p,i) => {
+    const realIdx = all.indexOf(p);
+    const statusIcons = {todo:'○',wip:'◑',done:'●'};
+    const priorityLabels = {alta:'Alta',media:'Media',baja:'Baja'};
+    const statusLabels = {todo:'Por hacer',wip:'En proceso',done:'Listo'};
+    const nextStatus = {todo:'wip',wip:'done',done:'todo'};
+    const div = document.createElement('div');
+    div.className=`pend-item status-${p.status}`;
+    div.innerHTML=`
+      <button class="pend-status-btn ${p.status}" title="${statusLabels[p.status]} → clic para avanzar" onclick="cycleStatus(${realIdx})">${statusIcons[p.status]}</button>
+      <div class="pend-body">
+        <div class="pend-text">${escHtml(p.text)}</div>
+        <div class="pend-meta">
+          <span class="pend-priority pri-${p.priority}">${priorityLabels[p.priority]}</span>
+          <span class="pend-date">${statusLabels[p.status]}</span>
+          ${p.date?`<span class="pend-date">${p.date}</span>`:''}
+        </div>
+      </div>
+      <div class="pend-actions">
+        <button class="pend-act-btn" title="Eliminar" onclick="deletePendiente(${realIdx})">✕</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleAddForm() {
+  const f=document.getElementById('addForm');
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) document.getElementById('newPendText').focus();
+}
+
+function addPendiente() {
+  const text = document.getElementById('newPendText').value.trim();
+  if (!text) return;
+  const p = {
+    id: Date.now(),
+    text,
+    priority: document.getElementById('newPendPriority').value,
+    status: document.getElementById('newPendStatus').value,
+    date: new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short'})
+  };
+  if (!appState[currentProj].pendientes) appState[currentProj].pendientes=[];
+  appState[currentProj].pendientes.push(p);
+  saveState();
+  document.getElementById('newPendText').value='';
+  toggleAddForm();
+  renderPendientes();
+  buildSidebar();
+  updateBadges();
+}
+
+function cycleStatus(idx) {
+  const next = {todo:'wip',wip:'done',done:'todo'};
+  const p = appState[currentProj].pendientes[idx];
+  if (p) { p.status=next[p.status]; saveState(); renderPendientes(); buildSidebar(); updateBadges(); }
+}
+
+function deletePendiente(idx) {
+  appState[currentProj].pendientes.splice(idx,1);
+  saveState(); renderPendientes(); buildSidebar(); updateBadges();
+}
+
+function clearDone() {
+  appState[currentProj].pendientes = (appState[currentProj].pendientes||[]).filter(p=>p.status!=='done');
+  saveState(); renderPendientes(); buildSidebar(); updateBadges();
+}
+
+function filterStatus(s,el) {
+  statusFilter=s;
+  document.querySelectorAll('.sf').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  renderPendientes();
+}
+
+// ─── ARCHIVOS ─────────────────────────────────────────────────────────
+function renderFiles() {
+  document.getElementById('filesTitle').textContent=`Archivos · ${PROJS[currentProj].name}`;
+  const list=document.getElementById('filesList');
+  list.innerHTML='';
+  const files=appState[currentProj].files||[];
+  if (files.length===0) {
+    list.innerHTML=`<div class="files-empty">Sin archivos vinculados.<br>Agrega links a GitHub, Drive, Notion o cualquier recurso del proyecto.</div>`;
+    return;
+  }
+  const typeIcons={html:'📄',github:'🐙',drive:'📁',doc:'📝',notion:'🗒️',sheet:'📊',other:'🔗'};
+  files.forEach((f,i)=>{
+    const div=document.createElement('div');
+    div.className='file-item';
+    div.innerHTML=`
+      <div class="file-icon">${typeIcons[f.type]||'🔗'}</div>
+      <div class="file-body">
+        <div class="file-name">${f.url?`<a class="file-link" href="${escHtml(f.url)}" target="_blank">${escHtml(f.name)}</a>`:escHtml(f.name)}</div>
+        <div class="file-meta">
+          <span>${f.type}</span>
+          ${f.tag?`<span class="file-tag">${escHtml(f.tag)}</span>`:''}
+          ${f.date?`<span>${f.date}</span>`:''}
+        </div>
+      </div>
+      <div class="file-actions">
+        ${f.url?`<button class="file-act-btn" title="Abrir" onclick="window.open('${escHtml(f.url)}','_blank')">↗</button>`:''}
+        <button class="file-act-btn" title="Eliminar" onclick="deleteFile(${i})">✕</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleAddFileForm() {
+  const f=document.getElementById('addFileForm');
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) document.getElementById('newFileName').focus();
+}
+
+function addFile() {
+  const name=document.getElementById('newFileName').value.trim();
+  if (!name) return;
+  const f={
+    id:Date.now(),
+    name,
+    url:document.getElementById('newFileUrl').value.trim(),
+    type:document.getElementById('newFileType').value,
+    tag:document.getElementById('newFileTag').value,
+    date:new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})
+  };
+  if (!appState[currentProj].files) appState[currentProj].files=[];
+  // If tag is "último generado" and type is same, mark previous as old
+  if (f.tag==='último') {
+    appState[currentProj].files.forEach(x=>{ if(x.type===f.type&&x.tag==='último') x.tag='anterior'; });
+  }
+  appState[currentProj].files.unshift(f);
+  saveState();
+  document.getElementById('newFileName').value='';
+  document.getElementById('newFileUrl').value='';
+  toggleAddFileForm();
+  renderFiles();
+  updateBadges();
+}
+
+function deleteFile(idx) {
+  appState[currentProj].files.splice(idx,1);
+  saveState(); renderFiles(); updateBadges();
+}
+
+// ─── BADGES ───────────────────────────────────────────────────────────
+function updateBadges() {
+  const pendCount=(appState[currentProj].pendientes||[]).filter(p=>p.status!=='done').length;
+  const filesCount=(appState[currentProj].files||[]).length;
+  document.getElementById('pendBadge').textContent=pendCount;
+  document.getElementById('filesBadge').textContent=filesCount;
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  const saved=sessionStorage.getItem('quanty_key');
+  if (saved) { apiKey=saved; document.getElementById('apiScreen').style.display='none'; }
+  buildSidebar();
+  renderChat();
+  updateBadges();
+  document.getElementById('topProj').textContent=PROJS[currentProj].name;
+});
+</script>
+</body>
+</html>
